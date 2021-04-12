@@ -103,4 +103,18 @@ public interface EnvelopeRepository extends JpaRepository<Envelope, UUID> {
     List<Envelope> getCompleteEnvelopesFromContainer(
         @Param("container") String container
     );
+
+    /**
+     * Finds envelopes with an id that matches any of the ids in the id string list parameter.
+     *
+     * @param idsList list of envelope ids.
+     * @return A list of envelopes.
+     */
+    @Query("select e from Envelope e"
+        + " where e.id in :idsList"
+        + " order by e.createdAt desc"
+    )
+    List<Envelope> findEnvelopesByIds(
+        @Param("idsList") List<String> idsList
+    );
 }
