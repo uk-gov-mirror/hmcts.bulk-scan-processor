@@ -1,14 +1,12 @@
 package uk.gov.hmcts.reform.bulkscanprocessor.services.zipfilestatus;
 
 import org.springframework.stereotype.Service;
-import uk.gov.hmcts.reform.bulkscanprocessor.entity.Envelope;
-import uk.gov.hmcts.reform.bulkscanprocessor.entity.EnvelopeRepository;
-import uk.gov.hmcts.reform.bulkscanprocessor.entity.ProcessEvent;
-import uk.gov.hmcts.reform.bulkscanprocessor.entity.ProcessEventRepository;
+import uk.gov.hmcts.reform.bulkscanprocessor.entity.*;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileEnvelope;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileEvent;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileStatus;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.stream.Collectors.toList;
@@ -21,12 +19,17 @@ public class ZipFileStatusService {
 
     private final ProcessEventRepository eventRepo;
     private final EnvelopeRepository envelopeRepo;
+    private final ScannableItemRepository scannableItemRepo;
 
     // region constructor
-
-    public ZipFileStatusService(ProcessEventRepository eventRepo, EnvelopeRepository envelopeRepo) {
+    public ZipFileStatusService(
+        ProcessEventRepository eventRepo,
+        EnvelopeRepository envelopeRepo,
+        ScannableItemRepository scannableItemRepo
+    ) {
         this.eventRepo = eventRepo;
         this.envelopeRepo = envelopeRepo;
+        this.scannableItemRepo = scannableItemRepo;
     }
 
     // endregion
@@ -40,6 +43,46 @@ public class ZipFileStatusService {
             envelopes.stream().map(this::mapEnvelope).collect(toList()),
             events.stream().map(this::mapEvent).collect(toList())
         );
+    }
+
+    public List<ZipFileStatus> getStatusByDcn(String documentControllNumber) {
+
+        //validate dcn - i.e. if it is 6 digits or more
+         if(documentControllNumber.length() < 6)
+         {
+             return null;
+         }
+
+        // get the dcns that match the start 6 digits pattern
+        List<ScannableItem> scannableItems = scannableItemRepo.findByDcn(documentControllNumber);
+
+        // extract the distinct envelop ids
+        var envelopIdList = scannableItems
+            .stream()
+            .distinct()
+            .map(i->i.getDocumentUuid())
+            .collect(toList());
+
+        // get the envelops that match the envelop ids list
+        var envelopes = envelopeRepo.findEnvelopesByIds(envelopIdList);
+
+        // get distinct zipfilenames
+        var zipFileNames = envelopes.stream().map(f->f.getZipFileName()).collect(toList());
+
+        List<ZipFileStatus> zipFileStatusList = new ArrayList<>();
+
+        zipFileNames.stream().forEach(
+            zipFileName ->
+                zipFileStatusList.add(
+                    new ZipFileStatus(
+                        zipFileName,
+                        envelopeRepo.findByZipFileName(zipFileName).stream().map(this::mapEnvelope).collect(toList()),
+                        eventRepo.findByZipFileName(zipFileName).stream().map(this::mapEvent).collect(toList())
+                    )
+                )
+        );
+
+        return zipFileStatusList;
     }
 
     private ZipFileEnvelope mapEnvelope(Envelope envelope) {
