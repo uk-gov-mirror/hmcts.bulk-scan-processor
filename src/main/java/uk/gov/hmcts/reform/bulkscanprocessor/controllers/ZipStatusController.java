@@ -8,8 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileStatus;
 import uk.gov.hmcts.reform.bulkscanprocessor.services.zipfilestatus.ZipFileStatusService;
 
-import java.util.List;
-
 @RestController
 @RequestMapping(
     path = "/zip-files",
@@ -28,11 +26,6 @@ public class ZipStatusController {
     @GetMapping
     public ZipFileStatus findByFileName(@RequestParam("name") String fileName) {
         return service.getStatusFor(fileName);
-    }
-
-    @GetMapping
-    public List<ZipFileStatus> findByDocumentControlNumber(@RequestParam("dcn") String dcn) {
-        return service.getStatusByDcn(dcn);
     }
 
 }

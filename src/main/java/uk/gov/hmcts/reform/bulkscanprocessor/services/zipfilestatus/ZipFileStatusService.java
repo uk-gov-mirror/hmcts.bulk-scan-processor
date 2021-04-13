@@ -1,11 +1,20 @@
 package uk.gov.hmcts.reform.bulkscanprocessor.services.zipfilestatus;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import uk.gov.hmcts.reform.bulkscanprocessor.entity.*;
+import uk.gov.hmcts.reform.bulkscanprocessor.entity.Envelope;
+import uk.gov.hmcts.reform.bulkscanprocessor.entity.EnvelopeRepository;
+import uk.gov.hmcts.reform.bulkscanprocessor.entity.ProcessEvent;
+import uk.gov.hmcts.reform.bulkscanprocessor.entity.ProcessEventRepository;
+import uk.gov.hmcts.reform.bulkscanprocessor.entity.ScannableItem;
+import uk.gov.hmcts.reform.bulkscanprocessor.entity.ScannableItemRepository;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileEnvelope;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileEvent;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileStatus;
+import uk.gov.hmcts.reform.bulkscanprocessor.services.email.ReportSender;
 
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,7 +25,7 @@ import static uk.gov.hmcts.reform.bulkscanprocessor.model.mapper.EnvelopeRespons
 
 @Service
 public class ZipFileStatusService {
-
+    private static final Logger log = LoggerFactory.getLogger(ReportSender.class);
     private final ProcessEventRepository eventRepo;
     private final EnvelopeRepository envelopeRepo;
     private final ScannableItemRepository scannableItemRepo;
@@ -45,29 +54,24 @@ public class ZipFileStatusService {
         );
     }
 
-    public List<ZipFileStatus> getStatusByDcn(String documentControllNumber) {
+    public List<ZipFileStatus> getStatusByDcn(String documentControllNumber) throws InvalidParameterException {
 
-        //validate dcn - i.e. if it is 6 digits or more
-         if(documentControllNumber.length() < 6)
-         {
-             return null;
-         }
+        if (documentControllNumber.length() < 6) {
+            log.error("Exception in Search by DCN error: DCN number specified is less than 6 characters in length.");
+            throw new InvalidParameterException("DCN number has to be at least 6 characters long");
+        }
 
-        // get the dcns that match the start 6 digits pattern
         List<ScannableItem> scannableItems = scannableItemRepo.findByDcn(documentControllNumber);
 
-        // extract the distinct envelop ids
         var envelopIdList = scannableItems
             .stream()
             .distinct()
-            .map(i->i.getDocumentUuid())
+            .map(i -> i.getDocumentUuid())
             .collect(toList());
 
-        // get the envelops that match the envelop ids list
         var envelopes = envelopeRepo.findEnvelopesByIds(envelopIdList);
 
-        // get distinct zipfilenames
-        var zipFileNames = envelopes.stream().map(f->f.getZipFileName()).collect(toList());
+        var zipFileNames = envelopes.stream().map(f -> f.getZipFileName()).collect(toList());
 
         List<ZipFileStatus> zipFileStatusList = new ArrayList<>();
 

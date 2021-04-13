@@ -12,6 +12,7 @@ import uk.gov.hmcts.reform.bulkscanprocessor.entity.Payment;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.ProcessEvent;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.ProcessEventRepository;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.ScannableItem;
+import uk.gov.hmcts.reform.bulkscanprocessor.entity.ScannableItemRepository;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.Status;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.common.Event;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileEnvelope;
@@ -37,12 +38,13 @@ public class ZipFileStatusServiceTest {
 
     @Mock private ProcessEventRepository eventRepo;
     @Mock private EnvelopeRepository envelopeRepo;
+    @Mock private ScannableItemRepository scannableItemRepo;
 
     private ZipFileStatusService service;
 
     @BeforeEach
     public void setUp() {
-        this.service = new ZipFileStatusService(eventRepo, envelopeRepo);
+        this.service = new ZipFileStatusService(eventRepo, envelopeRepo, scannableItemRepo);
     }
 
     @Test
