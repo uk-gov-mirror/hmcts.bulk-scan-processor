@@ -132,7 +132,7 @@ public class ZipStatusControllerTest {
         mockMvc
             .perform(get("/zip-files").params(map))
             .andDo(print())
-            .andExpect(status().isOk());
+            .andExpect(status().isBadRequest());
     }
 
     @Test

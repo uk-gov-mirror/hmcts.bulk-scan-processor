@@ -12,9 +12,11 @@ import org.springframework.web.server.ResponseStatusException;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileStatus;
 import uk.gov.hmcts.reform.bulkscanprocessor.services.zipfilestatus.ZipFileStatusService;
 
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(
@@ -32,20 +34,20 @@ public class ZipStatusController {
     // endregion
 
     @RequestMapping
-    public List<ZipFileStatus> findByFileNameOrDCN(@RequestParam(required = false,value = "name") String fileName, @RequestParam(required = false,value = "dcn") @Size(min = 6) String dcn) {
+    public List<ZipFileStatus> findByFileNameOrDCN(@RequestParam(required = true) @NotNull @Size(max = 1) Map<String,String> params) throws HttpClientErrorException.BadRequest {
 
-        if (fileName != null && dcn == null){
+        String fileName = params.get("fileName");
+        String dcn = params.get("dcn");
+
+        if (fileName != null) {
             List<ZipFileStatus> zipFileStatuses = new ArrayList<>();
             zipFileStatuses.add(service.getStatusFor(fileName));
             return zipFileStatuses;
         }
-        else if (fileName == null && dcn != null){
+        else if (dcn!= null) {
             return service.getStatusByDcn(dcn);
         }
-        else {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST, "Wrong parameters", null);
-        }
+        return null;
     }
 
 }
