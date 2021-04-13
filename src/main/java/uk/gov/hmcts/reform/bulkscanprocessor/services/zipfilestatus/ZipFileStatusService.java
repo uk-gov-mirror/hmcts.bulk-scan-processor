@@ -7,7 +7,6 @@ import uk.gov.hmcts.reform.bulkscanprocessor.entity.Envelope;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.EnvelopeRepository;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.ProcessEvent;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.ProcessEventRepository;
-import uk.gov.hmcts.reform.bulkscanprocessor.entity.ScannableItem;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.ScannableItemRepository;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileEnvelope;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileEvent;
@@ -61,18 +60,7 @@ public class ZipFileStatusService {
             throw new InvalidParameterException("DCN number has to be at least 6 characters long");
         }
 
-        List<ScannableItem> scannableItems = scannableItemRepo.findByDcn(documentControllNumber);
-
-        var envelopIdList = scannableItems
-            .stream()
-            .distinct()
-            .map(i -> i.getDocumentUuid())
-            .collect(toList());
-
-        var envelopes = envelopeRepo.findEnvelopesByIds(envelopIdList);
-
-        var zipFileNames = envelopes.stream().map(f -> f.getZipFileName()).collect(toList());
-
+        List<String> zipFileNames = scannableItemRepo.findByDcn(documentControllNumber);
         List<ZipFileStatus> zipFileStatusList = new ArrayList<>();
 
         zipFileNames.stream().forEach(

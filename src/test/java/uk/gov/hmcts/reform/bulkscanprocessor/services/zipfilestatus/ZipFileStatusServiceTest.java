@@ -14,17 +14,14 @@ import uk.gov.hmcts.reform.bulkscanprocessor.entity.ProcessEventRepository;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.ScannableItem;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.ScannableItemRepository;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.Status;
-import uk.gov.hmcts.reform.bulkscanprocessor.exceptions.EnvelopeNotCompletedOrStaleException;
-import uk.gov.hmcts.reform.bulkscanprocessor.model.common.DocumentType;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.common.Event;
-import uk.gov.hmcts.reform.bulkscanprocessor.model.common.OcrData;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileEnvelope;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileEvent;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileStatus;
 
 import java.security.InvalidParameterException;
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -149,65 +146,36 @@ public class ZipFileStatusServiceTest {
 
     @Test
     // A valid dcn parameter is at least 6 characters long
-    public void should_return_list_of_ZipFileStatus_for_valid_dcn_parameter_search()
-    {
+    public void should_return_list_of_ZipFileStatus_for_valid_dcn_parameter_search() {
         // given
         List<ProcessEvent> events1 = asList(
             event(Event.DOC_UPLOADED, "A", now(), null),
             event(Event.DOC_PROCESSED_NOTIFICATION_SENT, "A", now().plusSeconds(1), null),
             event(Event.DOC_FAILURE, "B", now().minusSeconds(2), "reason2")
         );
-        List<Envelope> envelopes1 = asList(envelope("A"), envelope("B"));
-        given(envelopeRepo.findByZipFileName("hello1.zip")).willReturn(envelopes1);
-        given(eventRepo.findByZipFileName("hello1.zip")).willReturn(events1);
-
         List<ProcessEvent> events2 = asList(
             event(Event.DOC_UPLOADED, "C", now(), null),
             event(Event.DOC_PROCESSED_NOTIFICATION_SENT, "C", now().plusSeconds(1), null),
             event(Event.DOC_FAILURE, "D", now().minusSeconds(2), "reason3")
         );
+        List<Envelope> envelopes1 = asList(envelope("A"), envelope("B"));
         List<Envelope> envelopes2 = asList(envelope("C"), envelope("D"));
+        var documentControlNumber = "100099";
+        var zipFileNames = Arrays.asList("hello1.zip", "hello2.zip");
+
+        given(scannableItemRepo.findByDcn(documentControlNumber)).willReturn(zipFileNames);
+        given(envelopeRepo.findByZipFileName("hello1.zip")).willReturn(envelopes1);
+        given(eventRepo.findByZipFileName("hello1.zip")).willReturn(events1);
         given(envelopeRepo.findByZipFileName("hello2.zip")).willReturn(envelopes2);
         given(eventRepo.findByZipFileName("hello2.zip")).willReturn(events2);
 
-        var documentControllNumber = "100099";
-        var scannableItemsList = new ArrayList<ScannableItem>();
-        scannableItemsList.add(
-            new ScannableItem(
-                documentControllNumber,
-                now().minusSeconds(2),
-                null,
-                null,
-                "Destroy",
-                null,
-                null,
-                null,
-                "none yet",
-                null,
-                null,
-                null
-            )
-        );
-
-        given(scannableItemRepo.findByDcn(documentControllNumber)).willReturn(scannableItemsList);
-
-        List<String> envelopIdList = new ArrayList<>();
-        envelopIdList.add(envelopes1.get(0).getId().toString());
-        envelopIdList.add(envelopes1.get(1).getId().toString());
-
-        given(envelopeRepo.findEnvelopesByIds(envelopIdList)).willReturn(envelopes1);
-
         // when
-        ZipFileStatus result1 = service.getStatusFor("hello1.zip");
-        ZipFileStatus result2 = service.getStatusFor("hello2.zip");
-        var zipFileStatusList = service.getStatusByDcn("100099");
+        var zipFileStatusList = service.getStatusByDcn(documentControlNumber);
 
         // then
-        assertThat(result1.fileName).isEqualTo("hello1.zip");
-
-        assertThat(zipFileStatusList.get(0).fileName).isEqualTo("hello1.zip");
         assertThat(zipFileStatusList.size() == 2);
-
+        assertThat(zipFileStatusList.get(0).fileName).isEqualTo("hello1.zip");
+        assertThat(zipFileStatusList.get(1).fileName).isEqualTo("hello2.zip");
         assertThat(zipFileStatusList.get(0).envelopes)
             .usingRecursiveFieldByFieldElementComparator()
             .containsExactlyInAnyOrder(
@@ -242,7 +210,40 @@ public class ZipFileStatusServiceTest {
                     toPaymentsResponse(envelopes1.get(1).getPayments())
                 )
             );
-
+        assertThat(zipFileStatusList.get(1).envelopes)
+            .usingRecursiveFieldByFieldElementComparator()
+            .containsExactlyInAnyOrder(
+                new ZipFileEnvelope(
+                    envelopes2.get(0).getId().toString(),
+                    envelopes2.get(0).getContainer(),
+                    envelopes2.get(0).getStatus().name(),
+                    envelopes2.get(0).getCcdId(),
+                    envelopes2.get(0).getEnvelopeCcdAction(),
+                    envelopes2.get(0).isZipDeleted(),
+                    envelopes2.get(0).getRescanFor(),
+                    envelopes2.get(0).getClassification(),
+                    envelopes2.get(0).getJurisdiction(),
+                    envelopes2.get(0).getCaseNumber(),
+                    toScannableItemsResponse(envelopes2.get(0).getScannableItems()),
+                    toNonScannableItemsResponse(envelopes2.get(0).getNonScannableItems()),
+                    toPaymentsResponse(envelopes2.get(0).getPayments())
+                ),
+                new ZipFileEnvelope(
+                    envelopes2.get(1).getId().toString(),
+                    envelopes2.get(1).getContainer(),
+                    envelopes2.get(1).getStatus().name(),
+                    envelopes2.get(1).getCcdId(),
+                    envelopes2.get(1).getEnvelopeCcdAction(),
+                    envelopes2.get(1).isZipDeleted(),
+                    envelopes2.get(1).getRescanFor(),
+                    envelopes2.get(1).getClassification(),
+                    envelopes2.get(1).getJurisdiction(),
+                    envelopes2.get(1).getCaseNumber(),
+                    toScannableItemsResponse(envelopes2.get(1).getScannableItems()),
+                    toNonScannableItemsResponse(envelopes2.get(1).getNonScannableItems()),
+                    toPaymentsResponse(envelopes2.get(1).getPayments())
+                )
+            );
         assertThat(zipFileStatusList.get(0).events)
             .usingFieldByFieldElementComparator()
             .containsExactlyInAnyOrder(
@@ -263,6 +264,28 @@ public class ZipFileStatusServiceTest {
                     events1.get(2).getContainer(),
                     events1.get(2).getCreatedAt(),
                     events1.get(2).getReason()
+                )
+            );
+        assertThat(zipFileStatusList.get(1).events)
+            .usingFieldByFieldElementComparator()
+            .containsExactlyInAnyOrder(
+                new ZipFileEvent(
+                    events2.get(0).getEvent().name(),
+                    events2.get(0).getContainer(),
+                    events2.get(0).getCreatedAt(),
+                    events2.get(0).getReason()
+                ),
+                new ZipFileEvent(
+                    events2.get(1).getEvent().name(),
+                    events2.get(1).getContainer(),
+                    events2.get(1).getCreatedAt(),
+                    events2.get(1).getReason()
+                ),
+                new ZipFileEvent(
+                    events2.get(2).getEvent().name(),
+                    events2.get(2).getContainer(),
+                    events2.get(2).getCreatedAt(),
+                    events2.get(2).getReason()
                 )
             );
     }
