@@ -14,6 +14,7 @@ import uk.gov.hmcts.reform.bulkscanprocessor.entity.ProcessEventRepository;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.ScannableItem;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.ScannableItemRepository;
 import uk.gov.hmcts.reform.bulkscanprocessor.entity.Status;
+import uk.gov.hmcts.reform.bulkscanprocessor.exceptions.EnvelopeNotCompletedOrStaleException;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.common.DocumentType;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.common.Event;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.common.OcrData;
@@ -21,6 +22,7 @@ import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileEnve
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileEvent;
 import uk.gov.hmcts.reform.bulkscanprocessor.model.out.zipfilestatus.ZipFileStatus;
 
+import java.security.InvalidParameterException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +32,7 @@ import static java.time.Instant.now;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static uk.gov.hmcts.reform.bulkscanprocessor.model.mapper.EnvelopeResponseMapper.toNonScannableItemsResponse;
@@ -264,8 +267,18 @@ public class ZipFileStatusServiceTest {
             );
     }
 
-    //test case for the invalid argument exception when dcn is less than 6 chars
+    @Test
+    public void should_return_invalid_parameter_exception_for_dcn_less_than_6_chars() throws Exception {
 
+        //given
+        var documentControllNumber = "1000";
+
+        //when
+        //then
+        assertThatThrownBy(() -> service.getStatusByDcn("1000"))
+            .isInstanceOf(InvalidParameterException.class)
+            .hasMessageMatching("DCN number has to be at least 6 characters long");
+    }
 
     private Envelope envelope(String container) {
         Envelope envelope = mock(Envelope.class);
