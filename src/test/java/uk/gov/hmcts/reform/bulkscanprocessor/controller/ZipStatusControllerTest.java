@@ -83,8 +83,8 @@ public class ZipStatusControllerTest {
             new ZipFileEvent("type0", "container0", now().minusSeconds(10), "reason0"),
             new ZipFileEvent("type1", "container1", now().minusSeconds(15), "reason1")
         );
-        List<ZipFileStatus> zipFileStatusList= Arrays.asList(new ZipFileStatus("hello.zip", envelopes, events));
-        String documentControlNumber ="1000913";
+        List<ZipFileStatus> zipFileStatusList = Arrays.asList(new ZipFileStatus("hello.zip", envelopes, events));
+        String documentControlNumber = "1000913";
         given(service.getStatusByDcn(documentControlNumber)).willReturn(zipFileStatusList);
 
         mockMvc
@@ -127,8 +127,8 @@ public class ZipStatusControllerTest {
     @Test
     public void should_throw_exception_when_both_parameters_together() throws Exception {
         MultiValueMap<String,String> map = new LinkedMultiValueMap<String, String>();
-          map.add("dcn", "1000092");
-          map.add("name", "hello.zip");
+        map.add("dcn", "1000092");
+        map.add("name", "hello.zip");
         mockMvc
             .perform(get("/zip-files"))
             .andDo(print())
